@@ -49,6 +49,19 @@ protected:
 };
 #endif
 
+class SDLDrawingPanel : public DrawingPanel {
+public:
+    SDLDrawingPanel(wxWindow* parent, int _width, int _height);
+
+protected:
+    SDL_Window *sdlwindow;
+    SDL_Texture *texture;
+    SDL_Surface *surface;
+    SDL_Renderer *renderer;
+
+    void DrawArea(wxWindowDC&);
+};
+
 #if defined(__WXMSW__) && !defined(NO_D3D)
 class DXDrawingPanel : public DrawingPanel {
 public:
