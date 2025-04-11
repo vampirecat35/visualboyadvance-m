@@ -336,12 +336,12 @@ void SDLAudio::soundCallback(void* data, SDL_AudioStream *stream, int additional
         reinterpret_cast<SDLAudio*>(data)->read(reinterpret_cast<uint16_t*>(streamdata), additional_length > (int)sizeof(streamdata) ? sizeof(streamdata) : additional_length, &bytes_available);
     
         if (bytes_available > 0) {
-            SDL_PutAudioStreamData(stream, streamdata, additional_length > (int)sizeof(streamdata) ? sizeof(streamdata) : additional_length);
+            SDL_PutAudioStreamData(stream, streamdata, bytes_available > (int)sizeof(streamdata) ? sizeof(streamdata) : bytes_available);
         } else {
             return;
         }
     
-        additional_length -= sizeof(streamdata);
+        additional_length -= bytes_available > (int)sizeof(streamdata) ? sizeof(streamdata) : bytes_available;
     }
 }
 #else
