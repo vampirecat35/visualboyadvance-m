@@ -62,7 +62,7 @@ public:
     void pause() override;                                // pause the secondary sound buffer
     void reset() override;   // stop and reset the secondary sound buffer
     void resume() override;  // play/resume the secondary sound buffer
-    void read(uint16_t* stream, int length);
+    void read(uint16_t* stream, int length, std::size_t *read_bytes);
     void write(uint16_t* finalWave, int length) override;  // write the emulated sound to a sound buffer
     std::size_t buffer_size(); // The buffer size
     
@@ -301,7 +301,7 @@ std::size_t SDLAudio::buffer_size() {
     return size;
 }
 
-void SDLAudio::read(uint16_t* stream, int length) {
+void SDLAudio::read(uint16_t* stream, int length, std::size_t *read_bytes) {
     if (length <= 0)
         return;
     
@@ -318,24 +318,35 @@ void SDLAudio::read(uint16_t* stream, int length) {
     SDL_LockMutex(mutex);
     
     samples_buf.read(stream, std::min((std::size_t)(length / sizeof(uint16_t)), samples_buf.used()));
-    
+
     SDL_UnlockMutex(mutex);
+
+    if (read_bytes != NULL) {
+        *read_bytes = std::min((std::size_t)(length), (samples_buf.used() * sizeof(uint16_t)));
+    }
 }
 
 #ifdef ENABLE_SDL3
 void SDLAudio::soundCallback(void* data, SDL_AudioStream *stream, int additional_length, int length) {
     uint16_t streamdata[65536];
+    std::size_t bytes_available = 0;
     (void)length;
 
     while (additional_length > 0) {
-        reinterpret_cast<SDLAudio*>(data)->read(reinterpret_cast<uint16_t*>(streamdata), additional_length > (int)sizeof(streamdata) ? sizeof(streamdata) : additional_length);
-        SDL_PutAudioStreamData(stream, streamdata, additional_length > (int)sizeof(streamdata) ? sizeof(streamdata) : additional_length);
+        reinterpret_cast<SDLAudio*>(data)->read(reinterpret_cast<uint16_t*>(streamdata), additional_length > (int)sizeof(streamdata) ? sizeof(streamdata) : additional_length, &bytes_available);
+    
+        if (bytes_available > 0) {
+            SDL_PutAudioStreamData(stream, streamdata, additional_length > (int)sizeof(streamdata) ? sizeof(streamdata) : additional_length);
+        } else {
+            return;
+        }
+    
         additional_length -= sizeof(streamdata);
     }
 }
 #else
 void SDLAudio::soundCallback(void* data, uint8_t* stream, int len) {
-    reinterpret_cast<SDLAudio*>(data)->read(reinterpret_cast<uint16_t*>(stream), len);
+    reinterpret_cast<SDLAudio*>(data)->read(reinterpret_cast<uint16_t*>(stream), len, NULL);
 }
 #endif
 
